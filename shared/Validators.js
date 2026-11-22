@@ -3,7 +3,7 @@ const Validator = require('validatorjs');
 exports.plataformOverviewSaveValidator = (plataformOverviewReq) => {
     let rules = {
         pacientId: ['required', 'regex:/^[0-9a-fA-F]{24}$/i'],
-        'flowDataDevices.*.deviceName': ['required', { 'in': ['Pitaco', 'Manovacuômetro', 'Cinta'] }],
+        'flowDataDevices.*.deviceName': ['required', { 'in': ['Pitaco', 'Pitaco 3.0', 'Manovacuômetro', 'Cinta'] }],
         'flowDataDevices.*.flowData.*.flowValue': 'required|numeric',
         'flowDataDevices.*.flowData.*.timestamp': 'required|date',
         playStart: 'required|date',
