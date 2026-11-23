@@ -6,6 +6,7 @@ on:
       - feature/pitaco3-read-api
   pull_request:
     paths:
+      - 'docs/MARCO_04_ENCERRAMENTO.md'
       - 'GetFlowDataDevice/**'
       - 'GetPacientPlataformOverview/**'
       - 'GetPacientPlataformStatistics/**'
