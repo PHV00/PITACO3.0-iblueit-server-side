@@ -183,7 +183,10 @@ async function invoke(file, token, params, query) {
     assert.strictEqual(metrics.spo2Demo.acceptedCount, 1);
     assert.strictEqual(metrics.spo2Demo.mean, 96);
     assert.strictEqual(summary.body.data[0].rawSamplesOmitted, 0);
-    assert.strictEqual((await invoke('GetPacientPlataformPhysiologySummary', B, { pacientId: PATIENT })).body.data.length, 0);
+    const otherSummary = await invoke('GetPacientPlataformPhysiologySummary', B, { pacientId: PATIENT });
+    assert.strictEqual(otherSummary.body.data.length, 1);
+    assert.strictEqual(otherSummary.body.data[0].overviewId, '6b038f9d1c0cf50072392dc3');
+    assert.strictEqual(otherSummary.body.data[0].metrics.bpm.acceptedCount, 0);
     assert.strictEqual((await invoke('GetPacientPlataformPhysiologySummary', A, { pacientId: 'bad' })).status, 400);
 
     aggregatePipelines.length = 0;
