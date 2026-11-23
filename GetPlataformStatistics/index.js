@@ -28,7 +28,7 @@ module.exports = async function (context, req) {
 
     const aggregate = PacientModel.aggregate();
 
-    const pacientsMatchOperators = { $match: {} };
+    const pacientsMatchOperators = { $match: { _gameToken: req.headers.gametoken } };
     const plataformMathOperators = { $match: {} };
     let maxSessions = Number.MAX_SAFE_INTEGER;
     let deviceName = 'Pitaco';
@@ -51,12 +51,12 @@ module.exports = async function (context, req) {
         maxSessions = req.query.maxSessions;
 
     if (req.query.phase)
-        plataformMathOperators.$match.phase = req.query.phase;
+        plataformMathOperators.$match.phase = Number(req.query.phase);
     if (req.query.level)
-        plataformMathOperators.$match.level = req.query.level
+        plataformMathOperators.$match.level = Number(req.query.level)
 
-    if (req.query.devices)
-        deviceName = req.query.devices;
+    if (req.query.devices || req.query.gameDevice)
+        deviceName = req.query.devices || req.query.gameDevice;
 
     aggregate.append(pacientsMatchOperators);
     aggregate.project({ "_id": 1 });
@@ -118,6 +118,7 @@ module.exports = async function (context, req) {
                 $match: {
                     $expr: {
                         $and: [
+                            { $eq: ['$_gameToken', req.headers.gametoken] },
                             {
                                 $eq: [
                                     '$p',
@@ -184,9 +185,9 @@ module.exports = async function (context, req) {
             {
                 $match: {
                     $expr: {
-                        $eq: [
-                            '$_id',
-                            '$$flowDataDeviceId'
+                        $and: [
+                            { $eq: ['$_id', '$flowDataDeviceId'] },
+                            { $eq: ['$_gameToken', req.headers.gametoken] }
                         ]
                     }
                 }
@@ -259,7 +260,7 @@ module.exports = async function (context, req) {
     try {
         const plataformStatistics = await aggregate.exec();
         let plataformStatisticsPacientsIds = plataformStatistics.map(x => x.pacientId.toString());
-        let plataformInfos = await PlataformOverviewModel.find({ pacientId: { $in: plataformStatisticsPacientsIds } }, { pacientId: 1, maxScore: 1, scoreRatio: 1, phase: 1, level: 1 });
+        let plataformInfos = await PlataformOverviewModel.find({ pacientId: { $in: plataformStatisticsPacientsIds }, _gameToken: req.headers.gametoken }, { pacientId: 1, maxScore: 1, scoreRatio: 1, phase: 1, level: 1 });
         plataformStatistics.forEach(element => {
             element.plataformInfo = plataformInfos.filter(x => x.pacientId == element.pacientId);
         });

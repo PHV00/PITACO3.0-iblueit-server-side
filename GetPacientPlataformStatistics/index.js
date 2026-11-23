@@ -40,15 +40,15 @@ module.exports = async function (context, req) {
     }
 
     const aggregate = PlataformOverviewModel.aggregate();
-    const matchOperators = { $match: { pacientId: req.params.pacientId } }
+    const matchOperators = { $match: { pacientId: req.params.pacientId, _gameToken: req.headers.gametoken } }
     let deviceNameMatch = "";
 
     if (req.query.phase)
-        matchOperators.$match.phase = req.query.phase;
+        matchOperators.$match.phase = Number(req.query.phase);
     if (req.query.level)
-        matchOperators.$match.level = req.query.level
-    if (req.query.devices)
-        deviceNameMatch = req.query.devices;
+        matchOperators.$match.level = Number(req.query.level)
+    if (req.query.devices || req.query.gameDevice)
+        deviceNameMatch = req.query.devices || req.query.gameDevice;
     if (req.query.dataIni)
         matchOperators.$match.created_at = {
             $gte: new Date(new Date(`${req.query.dataIni} 00:00:00:000`).toISOString())
@@ -72,7 +72,10 @@ module.exports = async function (context, req) {
             {
                 $match:
                 {
-                    $expr: { $eq: ['$_id', '$$flowDataDeviceId'] }
+                    $expr: { $and: [
+                        { $eq: ['$_id', '$$flowDataDeviceId'] },
+                        { $eq: ['$_gameToken', req.headers.gametoken] }
+                    ] }
                 }
             },
             { $project: { flowDataDevices: 1 } }
