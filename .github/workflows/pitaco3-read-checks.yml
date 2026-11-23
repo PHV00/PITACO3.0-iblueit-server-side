@@ -1,0 +1,32 @@
+name: PITACO3 read API checks (no deploy)
+
+on:
+  push:
+    branches:
+      - feature/pitaco3-read-api
+  pull_request:
+    paths:
+      - 'GetFlowDataDevice/**'
+      - 'GetPacientPlataformOverview/**'
+      - 'GetPacientPlataformStatistics/**'
+      - 'GetPlataformOverview/**'
+      - 'GetPlataformStatistics/**'
+      - 'GetPacientPlataformPhysiologySummary/**'
+      - 'shared/**'
+      - 'tests/**'
+      - 'package.json'
+      - '.github/workflows/pitaco3-read-checks.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  read-regressions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run pure Node tests without Atlas or Azure deployment
+        run: npm test
