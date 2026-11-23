@@ -71,6 +71,7 @@ Na rota nova, somente BPM e SpO₂ são projetados na consulta Mongo. RED/IR e f
 2. Antes de implantar, verificar registros antigos sem `_gameToken`; não remover restrição de leitura para manter visualização histórica. Eventual migração requer comprovação de pertencimento.
 3. Verificar filtros/coortes nas telas legadas: resultados de outras contas, antes acessíveis por falha de isolamento, não aparecem mais.
 4. O POST legado não foi alterado por esta branch. A vinculação/autorização de `pacientId` nos endpoints de escrita permanece um tema separado de segurança.
+7. **Limitação de autorização por paciente:** o header `GameToken` representa a conta/grupo, não a identidade de uma pessoa. Contas de pacientes que compartilham esse mesmo token ainda podem requisitar dados de outros pacientes do grupo conhecendo seus IDs. Para garantir isolamento por paciente será necessário evoluir o mecanismo de autenticação/autorização (sessão individual ou token vinculado a usuário + checagem de papel). Não afirmar que esta branch resolve autorização individual.
 5. A SpO₂ é demonstrativa, não calibrada clinicamente. O resumo é adequado para análises técnicas, não para limiares ou alertas clínicos.
 6. Não fazer deploy diretamente em produção apenas para rodar testes.
 
