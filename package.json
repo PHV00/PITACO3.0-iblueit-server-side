@@ -4,7 +4,7 @@
   "description": "",
   "scripts": {
     "start": "func start",
-    "test": "node tests/pitaco3.contract.test.js && node tests/pitaco3.endpoint.test.js"
+    "test": "node tests/pitaco3.contract.test.js && node tests/pitaco3.endpoint.test.js && node tests/pitaco3.read.test.js"
   },
   "dependencies": {
     "axios": "^0.27.2",
