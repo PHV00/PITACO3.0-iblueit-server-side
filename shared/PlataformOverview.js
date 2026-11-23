@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const PlataformOverviewSchema = mongoose.Schema({
     _gameToken: { type: String },
+    clientRunId: { type: String },
     pacientId: { type: String },
     gameDevice: { type: String },
     devices: [String],
@@ -36,6 +37,16 @@ const PlataformOverviewSchema = mongoose.Schema({
     BorgScale: { type: Number }
 },
     { timestamps: { createdAt: 'created_at' } }
+);
+
+// Partial unique index ignores historical stage documents without a run ID.
+PlataformOverviewSchema.index(
+    { _gameToken: 1, clientRunId: 1 },
+    {
+        unique: true,
+        partialFilterExpression: { clientRunId: { $type: 'string' } },
+        name: 'unique_plataform_stage_run_by_token'
+    }
 );
 
 module.exports = mongoose.model('PlataformOverview', PlataformOverviewSchema);

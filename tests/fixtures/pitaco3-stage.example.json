@@ -1,0 +1,81 @@
+{
+  "clientRunId": "11111111222243338888999999999999",
+  "pacientId": "aaaaaaaaaaaaaaaaaaaaaaaa",
+  "playStart": "2026-11-22T21:00:00.000Z",
+  "playFinish": "2026-11-22T21:01:00.000Z",
+  "duration": 60,
+  "result": "Success",
+  "stageId": 1,
+  "phase": 1,
+  "level": 1,
+  "relaxTimeSpawned": false,
+  "score": 50,
+  "maxScore": 100,
+  "scoreRatio": 0.5,
+  "TargetsSpawned": 10,
+  "TargetsSuccess": 5,
+  "TargetsInsSuccess": 2,
+  "TargetsExpSuccess": 3,
+  "TargetsFails": 5,
+  "TargetsInsFail": 2,
+  "TargetsExpFail": 3,
+  "ObstaclesSpawned": 4,
+  "ObstaclesSuccess": 2,
+  "ObstaclesInsSuccess": 1,
+  "ObstaclesExpSuccess": 1,
+  "ObstaclesFail": 2,
+  "ObstaclesInsFail": 1,
+  "ObstaclesExpFail": 1,
+  "PlayerHp": 3,
+  "BorgScale": 4,
+  "flowDataDevices": [
+    {
+      "deviceName": "Pitaco 3.0",
+      "schemaVersion": 1,
+      "rawSamplesOmitted": 0,
+      "flowData": [
+        {
+          "flowValue": 23.5,
+          "timestamp": "2026-11-22T21:00:03.000Z"
+        }
+      ],
+      "bpmData": [
+        {
+          "timestamp": "2026-11-22T21:00:03.400Z",
+          "deviceTimeMs": 3400,
+          "bpm": 76.4,
+          "autocorrelation": 0.83,
+          "status": "EXPERIMENTAL - NAO CALIBRADO",
+          "contactConfirmed": true,
+          "g1Approved": true,
+          "queueLagMs": 20
+        }
+      ],
+      "spo2Data": [
+        {
+          "timestamp": "2026-11-22T21:00:03.400Z",
+          "deviceTimeMs": 3400,
+          "spo2Percent": null,
+          "ratioOfRatios": null,
+          "isDemonstration": true,
+          "status": "EXPERIMENTAL - NAO CALIBRADO",
+          "contactConfirmed": true,
+          "g1Approved": true,
+          "queueLagMs": 20
+        }
+      ],
+      "ppgRawData": [
+        {
+          "timestamp": "2026-11-22T21:00:03.360Z",
+          "deviceTimeMs": 3360,
+          "seq": 85,
+          "red": 72400,
+          "ir": 82300,
+          "contact": true,
+          "sqiReason": 0,
+          "queueLagMs": 20
+        }
+      ]
+    }
+  ]
+}
