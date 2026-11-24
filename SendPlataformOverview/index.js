@@ -30,7 +30,13 @@ module.exports = async function (context, req) {
     const body = req.body || {};
     // The Unity GameToken is a write-scoped credential for this account.
     // Reject writes for patient IDs owned by a different account before side effects.
-    if (body.pacientId && /^[a-f0-9]{24}$/i.test(body.pacientId)) {
+    if (body.pacientId !== undefined && !/^[a-f0-9]{24}$/i.test(body.pacientId)) {
+        context.res = { status: 400,
+            body: utils.createResponse(false, false, 'Identificador de paciente inválido.', null, 300) };
+        context.done();
+        return;
+    }
+    if (body.pacientId) {
         const belongsToAccount = await PatientModel.exists({
             _id: body.pacientId, _gameToken: gameToken
         });
