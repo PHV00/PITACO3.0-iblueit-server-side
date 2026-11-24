@@ -16,10 +16,7 @@ module.exports = async function (context, req) {
     const Flow = mongoose.model('FlowDataDevice');
     const id = req.params && req.params.pacientId;
     const token = req.headers && req.headers.gametoken;
-    function reply(status, success, authorized, message, data, code) {
-        context.res = { status, body: utils.createResponse(success, authorized, message, data || null, code ?? null) };
-        context.done();
-    }
+    const reply = require('../shared/SecurityResponse').bind(context);
     if (!/^[0-9a-f]{24}$/i.test(id || ''))
         return reply(400, false, false, 'Paciente inválido.', null, 300);
     try {

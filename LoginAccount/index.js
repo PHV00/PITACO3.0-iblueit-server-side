@@ -9,10 +9,7 @@ module.exports = async function (context, req) {
     await mongoose.connect(process.env.MongoDbAtlas);
     require('../shared/UserAccount');
     const User = mongoose.model('UserAccount');
-    function reply(status, success, authorized, message, data, code) {
-        context.res = { status, body: utils.createResponse(success, authorized, message, data || null, code ?? null) };
-        context.done();
-    }
+    const reply = require('../shared/SecurityResponse').bind(context);
     const input = req.body || {};
     const validated = validations.authenticateValidator(input);
     if (validated.errorCount) return reply(400, false, false, 'Credenciais inválidas.', null, 2);

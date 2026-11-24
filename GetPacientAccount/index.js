@@ -8,10 +8,7 @@ module.exports = async function (context, req) {
     require('../shared/Pacient');
     const User = mongoose.model('UserAccount');
     const Patient = mongoose.model('Pacient');
-    function reply(status, success, authorized, message, data, code) {
-        context.res = { status, body: utils.createResponse(success, authorized, message, data || null, code ?? null) };
-        context.done();
-    }
+    const reply = require('../shared/SecurityResponse').bind(context);
     try {
         const admin = await access.administrator(req, mongoose);
         if (!admin) return reply(403, false, false, 'Acesso restrito ao administrador.', null, 1);

@@ -10,10 +10,7 @@ module.exports = async function (context, req) {
     require('../shared/Pacient');
     const User = mongoose.model('UserAccount');
     const Patient = mongoose.model('Pacient');
-    function reply(status, success, authorized, message, data, errorCode) {
-        context.res = { status, body: utils.createResponse(success, authorized, message, data || null, errorCode ?? null) };
-        context.done();
-    }
+    const reply = require('../shared/SecurityResponse').bind(context);
     const input = req.body || {};
     if (!Object.keys(input).length) return reply(400, false, false, 'Dados vazios!', null, 2);
     const result = validations.createUserValidator(input);
