@@ -9,6 +9,11 @@ module.exports = async function (context, req) {
     const CalibrationOverviewModel = mongoose.model('CalibrationOverview');
 
     const utils = require('../shared/utils');
+    const reader = await require('../shared/AccessControl').enforceRead(
+        context, req, mongoose
+    );
+    if (!reader) return;
+
 
     await utils.validateHeaders(req.headers, context);
 

@@ -8,6 +8,11 @@ module.exports = async function (context, req) {
     require('../shared/PlataformOverview');
     const Overview = mongoose.model('PlataformOverview');
     const utils = require('../shared/utils');
+    const reader = await require('../shared/AccessControl').enforceRead(
+        context, req, mongoose
+    );
+    if (!reader) return;
+
     const read = require('../shared/Pitaco3Read');
     const token = req.headers.gametoken;
 
@@ -23,6 +28,7 @@ module.exports = async function (context, req) {
     let parsed;
     try {
         parsed = read.buildOverviewQuery(req.query, token);
+        if (reader.role === 'User') parsed.filter.pacientId = reader.pacientId;
         if (req.query && req.query.plataformOverviewId) {
             if (!read.isObjectId(req.query.plataformOverviewId))
                 throw new Error('plataformOverviewId invalido');

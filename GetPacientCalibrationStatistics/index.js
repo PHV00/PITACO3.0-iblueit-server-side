@@ -9,6 +9,11 @@ module.exports = async function (context, req) {
     const CalibrationOverviewModel = mongoose.model('CalibrationOverview');
 
     const utils = require('../shared/utils');
+    const reader = await require('../shared/AccessControl').enforceRead(
+        context, req, mongoose
+    );
+    if (!reader) return;
+
 
     var isVerifiedGameToken = await utils.verifyGameToken(req.headers.gametoken, mongoose);
 
@@ -39,7 +44,7 @@ module.exports = async function (context, req) {
     }
 
     const aggregate = PlataformOverviewModel.aggregate();
-    const matchOperators = { $match: { pacientId: req.params.pacientId } }
+    const matchOperators = { $match: { pacientId: req.params.pacientId, _gameToken: req.headers.gametoken } }
     let deviceNameMatch = "";
 
     if (req.query.phase)

@@ -8,6 +8,11 @@ module.exports = async function (context, req) {
     require('../shared/FlowDataDevice');
     const Flow = mongoose.model('FlowDataDevice');
     const utils = require('../shared/utils');
+    const reader = await require('../shared/AccessControl').enforceRead(
+        context, req, mongoose
+    );
+    if (!reader) return;
+
     const read = require('../shared/Pitaco3Read');
     const token = req.headers.gametoken;
 

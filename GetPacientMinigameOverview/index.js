@@ -9,6 +9,11 @@ module.exports = async function (context, req) {
     const MinigameOverviewModel = mongoose.model('MinigameOverview');
 
     const utils = require('../shared/utils');
+    const reader = await require('../shared/AccessControl').enforceRead(
+        context, req, mongoose
+    );
+    if (!reader) return;
+
 
     var isVerifiedGameToken = await utils.verifyGameToken(req.headers.gametoken, mongoose);
 
@@ -40,6 +45,7 @@ module.exports = async function (context, req) {
     }
 
     // const findObj = {
+        _gameToken: req.headers.gametoken,
     //     pacientId: req.params.pacientId,
     //     _gameToken: req.headers.gametoken
     // }

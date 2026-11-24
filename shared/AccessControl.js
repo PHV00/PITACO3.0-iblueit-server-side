@@ -51,7 +51,41 @@ function validBootstrap(req) {
     const supplied = ((req && req.headers) || {})['x-admin-bootstrap-token'];
     return Boolean(configured && supplied && constantTimeMatch(supplied, configured));
 }
+async function enforceRead(context, req, mongoose, options) {
+    const utils = require('./utils');
+    const opts = options || {};
+    const session = await authenticate(req, mongoose);
+    const user = session && session.user;
+    const token = req && req.headers && req.headers.gametoken;
+    let allowed = user && token && user.gameToken &&
+        user.gameToken.token === token;
+    if (allowed && opts.adminOnly) allowed = user.role === 'Administrator';
+    if (allowed && user.role === 'User') {
+        const patientId = req.params && req.params.pacientId;
+        if (!user.pacientId) allowed = false;
+        if (patientId && String(patientId) !== String(user.pacientId)) allowed = false;
+        const flowId = req.params && req.params.flowDataDeviceId;
+        if (flowId) {
+            require('./PlataformOverview');
+            const Overview = mongoose.model('PlataformOverview');
+            allowed = Boolean(await Overview.exists({
+                _gameToken: token, pacientId: user.pacientId,
+                flowDataDevicesId: flowId
+            }));
+        }
+    }
+    if (!allowed || !['Administrator', 'User'].includes(user.role)) {
+        context.res = {
+            status: 403,
+            body: utils.createResponse(false, false, 'Sessão ou permissão inválida.', null, 1)
+        };
+        context.done();
+        return null;
+    }
+    return user;
+}
+
 module.exports = {
     SESSION_MS, bearerToken, hashToken, constantTimeMatch,
-    createSession, authenticate, administrator, validBootstrap
+    createSession, authenticate, administrator, validBootstrap, enforceRead
 };

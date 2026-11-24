@@ -9,6 +9,11 @@ module.exports = async function (context, req) {
     const PacientModel = mongoose.model('Pacient');
 
     const utils = require('../shared/utils');
+    const reader = await require('../shared/AccessControl').enforceRead(
+        context, req, mongoose
+    );
+    if (!reader) return;
+
 
     var isVerifiedGameToken = await utils.verifyGameToken(req.headers.gametoken, mongoose);
 
@@ -25,7 +30,8 @@ module.exports = async function (context, req) {
         return;
     }
 
-    const matchOperators = { $match: { _gameToken: req.headers.gametoken } }
+    const matchOperators = { $match: { _gameToken: req.headers.gametoken } };
+    if (reader.role === 'User') matchOperators.$match._id = mongoose.Types.ObjectId(reader.pacientId);
 
     const aggregate = PacientModel.aggregate();
 
