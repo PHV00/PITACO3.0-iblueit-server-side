@@ -67,9 +67,11 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_DF86D1EA410D48A9AB28F4C204B4A793 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_8F8E77A89E2A42A58D23BB3B1982DED0 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_D472FCA0A683476E87019F754EB31F20 }}
+          # Prefer the new Azure Deployment Center OIDC identity when configured.
+          # Keep historical secrets as fallback until federation is verified.
+          client-id: ${{ secrets.AZURE_CLIENT_ID || secrets.AZUREAPPSERVICE_CLIENTID_DF86D1EA410D48A9AB28F4C204B4A793 }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID || secrets.AZUREAPPSERVICE_TENANTID_8F8E77A89E2A42A58D23BB3B1982DED0 }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID || secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_D472FCA0A683476E87019F754EB31F20 }}
 
       - name: 'Run Azure Functions Action'
         uses: Azure/functions-action@v1
