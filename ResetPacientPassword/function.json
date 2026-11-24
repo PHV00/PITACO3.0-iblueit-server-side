@@ -1,0 +1,13 @@
+{
+  "bindings": [
+    {
+      "authLevel": "anonymous",
+      "type": "httpTrigger",
+      "direction": "in",
+      "name": "req",
+      "methods": ["post"],
+      "route": "pacients/{pacientId}/account/reset-password"
+    },
+    { "type": "http", "direction": "out", "name": "res" }
+  ]
+}
