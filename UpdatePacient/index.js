@@ -49,6 +49,13 @@ module.exports = async function (context, req) {
         return;
     }
 
+    if (!pacientReq || !pacientReq.capacitiesPitaco ||
+        !pacientReq.capacitiesMano || !pacientReq.capacitiesCinta) {
+        context.res = { status: 400,
+            body: utils.createResponse(false, true, 'Dados de capacidades incompletos.', null, 2) };
+        context.done();
+        return;
+    }
     pacientReq._gameToken = req.headers.gametoken;
 
     try {

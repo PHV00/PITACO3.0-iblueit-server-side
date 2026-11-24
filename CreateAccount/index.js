@@ -45,7 +45,7 @@ module.exports = async function (context, req) {
         const match = role === 'Administrator'
             ? { role, $or: [{ username: input.username }, { email: input.email }] }
             : { role, username: input.username, 'gameToken.token': parentToken };
-        if (await User.exists(match))
+        if (await User.exists({ username: input.username }) || await User.exists(match))
             return reply(409, false, false, 'Nome de usuário ou e-mail já utilizado.');
 
         const passwordHash = await bcrypt.hash(input.password, 12);

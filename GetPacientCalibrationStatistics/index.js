@@ -6,7 +6,9 @@ module.exports = async function (context, req) {
 
     //PlataformOverview Schema
     require('../shared/CalibrationOverview');
+    require('../shared/PlataformOverview');
     const CalibrationOverviewModel = mongoose.model('CalibrationOverview');
+    const PlataformOverviewModel = mongoose.model('PlataformOverview');
 
     const utils = require('../shared/utils');
     const reader = await require('../shared/AccessControl').enforceRead(

@@ -52,6 +52,16 @@ module.exports = async function (context, req) {
     if (req.query.sex)
         matchOperators.$match.sex = { $eq: req.query.sex };
     
+    for (const field of ['fromAge', 'toAge']) {
+        if (req.query[field] !== undefined &&
+            (!/^\\d{1,3}$/.test(String(req.query[field])) ||
+             Number(req.query[field]) > 125)) {
+            context.res = { status: 400,
+                body: utils.createResponse(false, true, 'Filtro de idade inválido.', null, 300) };
+            context.done();
+            return;
+        }
+    }
     if (req.query.fromAge) {
         let date = new Date();
         date.setHours(0, 0, 0, 0);

@@ -59,10 +59,18 @@ module.exports = async function (context, req) {
             $gte: new Date(`${req.query.dataIni} 00:00:00:000 UTC`).toISOString("yyyy-MM-ddThh:mm:ss.msZ"),
             $lte: new Date(`${req.query.dataFim} 23:59:59:999 UTC`).toISOString("yyyy-MM-ddThh:mm:ss.msZ")
         };
-    if (req.query.limit)
-        findOptionsObj.limit = parseInt(req.query.limit);
-    if (req.query.skip)
-        findOptionsObj.skip = parseInt(req.query.skip);
+    for (const [field, min, max] of [['limit', 1, 1000], ['skip', 0, 1000000]]) {
+        if (req.query[field] !== undefined) {
+            const value = Number(req.query[field]);
+            if (!Number.isSafeInteger(value) || value < min || value > max) {
+                context.res = { status: 400,
+                    body: utils.createResponse(false, true, field + ' inválido.', null, 300) };
+                context.done();
+                return;
+            }
+            findOptionsObj[field] = value;
+        }
+    }
     if (req.query.sort == "asc")
         findOptionsObj.sort = { created_at: 1 };
 

@@ -63,7 +63,8 @@ exports.gameParameterValidator = (gameParameterReq) => {
 
 exports.pacientSaveValidator = (pacientReq) => {
 
-    pacientReq.birthday = pacientReq.birthday.replace(new RegExp('/', 'g'), '-');
+    if (typeof pacientReq.birthday === 'string')
+        pacientReq.birthday = pacientReq.birthday.replace(/\//g, '-');
 
     let rules = {
         name: 'required|string',
@@ -166,7 +167,7 @@ exports.createUserValidator = (createTokenReq) => {
     let rules = {
         fullname: 'required|string',
         username: 'required|string',
-        password: 'required|string',
+        password: 'required|string|min:12|max:128',
         email: 'required|email',
         role: ['required', { 'in': ['Administrator', 'User'] }],
         pacientId: [{ required_if: ['role', 'User'] }, 'regex:/^[0-9a-fA-F]{24}$/i'],

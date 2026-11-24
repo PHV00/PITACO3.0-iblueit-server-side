@@ -67,7 +67,7 @@ module.exports = async function (context, req) {
             }
             return;
         }).catch(function (error) {
-            console.log(error);
+            context.log('[IA] Falha na consulta de vizinhos:', error && error.name);
             context.res = {
                 status: 400,
                 body: utils.createResponse(false, false, "Erro na Requisição", null, 1)
