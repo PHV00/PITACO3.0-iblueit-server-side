@@ -116,6 +116,9 @@ async function invoke(file, token, params, query) {
     Module._load = function (request, parent, isMain) {
         if (request === 'mongoose') return mongoose;
         if (request === '../shared/utils') return utils;
+        if (request === '../shared/AccessControl') return {
+            enforceRead: async () => ({ role: 'Administrator', pacientId: PATIENT })
+        };
         if (/^\.\.\/shared\/(FlowDataDevice|PlataformOverview|Pacient)$/.test(request))
             return {};
         return original.apply(this, arguments);

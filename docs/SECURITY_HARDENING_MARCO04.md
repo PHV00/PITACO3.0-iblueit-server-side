@@ -22,7 +22,7 @@
 2. **Frontend acoplado:** o frontend anterior lia `password` e acionava `POST /token` apenas com `userId`; após a mudança, a interface precisará aceitar `sessionToken` do login, enviar `Authorization` nas rotas administrativas e mostrar procedimento de redefinição em vez de exibir senha.
 3. **Mudança de API:** `POST /register` e `POST /token` exigem sessão de administrador (exceto bootstrap seguro da primeira conta). `GET /pacients/:id/account` muda resposta e exige sessão de administrador. `DELETE /pacients/:id` exige sessão de administrador. Esses endpoints NÃO devem ser implantados antes da atualização compatível do frontend.
 4. **GameToken:** permanece credencial legada de telemetria. Atualmente também delimita históricos em `_gameToken`. **Rotacionar GameToken sem migração de identidade estável de conta desconectará dados históricos.** Não rotacionar GameToken automaticamente nesta etapa.
-5. **Escopo ainda pendente:** identidade de paciente para todas as leituras, migração completa de contas legadas, revogação explícita/logout no backend, quotas/rate limits, auditoria de dependências e testes end-to-end em ambiente Azure de homologação. Não declarar essas garantias concluídas.
+5. **Escopo ainda pendente:** identidade por sessão aplicada às leituras de pacientes, mas *algumas rotas legadas de configuração e agregação* ainda exigem revisão de autorização por usuário; migração completa de contas legadas, revogação explícita/logout no backend, quotas/rate limits, auditoria de dependências e testes end-to-end em ambiente Azure de homologação. Não declarar essas garantias concluídas.
 6. **MongoDB transactions:** exigem deployment MongoDB que suporte transações (Atlas replica set). A transação de exclusão multi-coleção precisa de teste com banco de desenvolvimento.
 7. **Login:** mantém os campos legados de resposta (incluindo `gameToken`) **temporariamente** para compatibilidade; recomenda-se separar credencial de dispositivo da sessão de paciente na próxima fase.
 
@@ -34,3 +34,8 @@
 - Testar login de Administrator e User (hash novo e senha legada com migração), token expirado, bootstrap desabilitado e redaction de logs.
 - Testar `POST /plataforms` Unity 201/200/409 e GET de sinais sem modificação de formato.
 - Implantação somente após revisão do PR frontend correspondente e validação de acesso/índices no Azure/Atlas.
+
+
+## Ampliação da análise de leituras
+
+Consultas de pacientes (incluindo históricos de fluxo, BPM, SpO₂ DEMO, calibração e minijogos) exigem sessão de login vinculada ao GameToken, além do próprio token. Usuários de papel `User` têm consultas por paciente restritas ao seu ID e leituras agrupadas não podem retornar dados de terceiros. Rotas legadas de configuração do jogo preservam o protocolo anterior até homologação com a Unity.
