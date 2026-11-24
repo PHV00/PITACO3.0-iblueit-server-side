@@ -1,4 +1,4 @@
-name: SonarQube Cloud - ${{ github.event.repository.name }}
+name: SonarQube Cloud - JavaScript
 
 on:
   push:
