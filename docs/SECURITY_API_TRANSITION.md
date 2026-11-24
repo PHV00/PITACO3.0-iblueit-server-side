@@ -9,3 +9,5 @@
 - `POST /plataforms` continua com GameToken e mesmos retornos 201/200/409, mas rejeita paciente de outra conta.
 - O GameToken continua existindo enquanto a identificação estável de contas não for migrada. A UI do paciente ainda requer fase posterior para limitar todas as consultas legadas por usuário e implementar revogação/logout.
 - Todas as mudanças permanecem **fora de produção** até integração com frontend e homologação.
+
+- Novo `POST /logout` com `Authorization: Bearer <sessionToken>` revoga a sessão atual no backend (hash na coleção `authsessions`). O frontend deve chamar este endpoint ao sair.
