@@ -30,6 +30,11 @@ class Overview {
         ) || null;
     }
 }
+class Patient {
+    static async exists(q) {
+        return q._gameToken === 'test-token' && q._id === fixture.pacientId;
+    }
+}
 class Session {
     constructor(data) { Object.assign(this, data); this.created_at = new Date(); }
     async save() { state.sessions.push(this); return this; }
@@ -39,7 +44,7 @@ class Session {
 const mockMongoose = {
     connect: () => undefined,
     model: name => ({
-        FlowDataDevice: Flow, PlataformOverview: Overview, PlaySession: Session
+        FlowDataDevice: Flow, PlataformOverview: Overview, PlaySession: Session, Pacient: Patient
     })[name]
 };
 const mocks = {
@@ -47,6 +52,7 @@ const mocks = {
     '../shared/FlowDataDevice': {},
     '../shared/PlataformOverview': {},
     '../shared/PlaySession': {},
+    '../shared/Pacient': {},
     '../shared/Validators': {
         plataformOverviewSaveValidator: () => ({ errorCount: 0, errors: { errors: {} } })
     },

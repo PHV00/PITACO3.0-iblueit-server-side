@@ -29,8 +29,18 @@ module.exports = async function (context, req) {
 
     const aggregate = PacientModel.aggregate();
 
-    if (req.query.name)
-        matchOperators.$match.name = { $regex: "^" + String(req.query.name).replace(/[.*+?^\${}()|[\]\\]/g, '\\"^" + req.query.name + ".*"') + ".*", $options: 'i' };
+    if (req.query.name) {
+        const value = String(req.query.name);
+        if (value.length > 100) {
+            context.res = { status: 400, body: utils.createResponse(false, true, 'Nome muito longo.', null, 300) };
+            context.done();
+            return;
+        }
+        const metacharacters = '.+*?^$()[]{}|\\';
+        const escaped = Array.from(value).map(ch =>
+            metacharacters.includes(ch) ? '\\' + ch : ch).join('');
+        matchOperators.$match.name = { $regex: '^' + escaped + '.*', $options: 'i' };
+    }
     if (req.query.condition)
         matchOperators.$match.condition = { $eq: req.query.condition };
     if (req.query.sex)
