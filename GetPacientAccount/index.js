@@ -1,65 +1,34 @@
+'use strict';
 module.exports = async function (context, req) {
     const mongoose = require('mongoose');
-    const DATABASE = process.env.MongoDbAtlas;
-    mongoose.connect(DATABASE);
-    mongoose.Promise = global.Promise;
-
-    //PlataformOverview Schema
-    require('../shared/UserAccount');
-    const UserAccountModel = mongoose.model('UserAccount');
-
     const utils = require('../shared/utils');
-
-    var isVerifiedGameToken = await utils.verifyGameToken(req.headers.gametoken, mongoose);
-
-    if(!isVerifiedGameToken){
-        context.res = {
-            status: 403,
-            body: utils.createResponse(false,
-                false,
-                "Chave de acesso inválida.",
-                null,
-                1)
-        }
+    const access = require('../shared/AccessControl');
+    await mongoose.connect(process.env.MongoDbAtlas);
+    require('../shared/UserAccount');
+    require('../shared/Pacient');
+    const User = mongoose.model('UserAccount');
+    const Patient = mongoose.model('Pacient');
+    function reply(status, success, authorized, message, data, code) {
+        context.res = { status, body: utils.createResponse(success, authorized, message, data || null, code ?? null) };
         context.done();
-        return;
     }
-
-    if (req.params.pacientId === undefined || req.params.pacientId == null) {
-        context.res = {
-            status: 400,
-            body: utils.createResponse(false,
-                true,
-                "Parâmetros de consulta inexistentes.",
-                null,
-                300)
-        }
-        context.done();
-        return;
-    }
-
     try {
-        const pacient = await UserAccountModel.findOne({pacientId: req.params.pacientId}, '_id pacientId username password');
-        context.log("[DB QUERYING] - Pacient Account Get by ID");
-        context.res = {
-            status: 200,
-            body: utils.createResponse(true,
-                true,
-                "Consulta realizada com sucesso.",
-                pacient,
-                null)
-        }
+        const admin = await access.administrator(req, mongoose);
+        if (!admin) return reply(403, false, false, 'Acesso restrito ao administrador.', null, 1);
+        const token = admin.gameToken && admin.gameToken.token;
+        if (!token || token !== req.headers.gametoken)
+            return reply(403, false, false, 'Credencial da conta inválida.', null, 1);
+        const id = req.params && req.params.pacientId;
+        if (!/^[a-f0-9]{24}$/i.test(id || '')) return reply(400, false, false, 'Paciente inválido.', null, 300);
+        if (!await Patient.exists({ _id: id, _gameToken: token }))
+            return reply(404, false, false, 'Paciente não encontrado nesta conta.');
+        // Explicit allowlist: NEVER select or return password.
+        const patientAccount = await User.findOne({
+            role: 'User', pacientId: id, 'gameToken.token': token
+        }).select('_id pacientId username');
+        return reply(200, true, true, 'Consulta realizada com sucesso.', patientAccount);
     } catch (err) {
-        context.log("[DB QUERYING] - ERROR: ", err);
-        context.res = {
-            status: 500,
-            body: utils.createResponse(false,
-                true,
-                "Ocorreu um erro interno ao realizar a operação.",
-                null,
-                0)
-        }
+        context.log.error('[PATIENT ACCOUNT] Falha:', err && err.name);
+        return reply(500, false, false, 'Erro interno ao consultar a conta.', null, 0);
     }
-
-    context.done();
 };

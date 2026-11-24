@@ -6,10 +6,12 @@ module.exports = async function (context, req) {
     require('../shared/PlataformOverview');
     require('../shared/FlowDataDevice');
     require('../shared/PlaySession');
+    require('../shared/Pacient');
 
     const PlataformOverviewModel = mongoose.model('PlataformOverview');
     const FlowDataDeviceModel = mongoose.model('FlowDataDevice');
     const PlaySessionModel = mongoose.model('PlaySession');
+    const PatientModel = mongoose.model('Pacient');
     const validations = require('../shared/Validators');
     const contract = require('../shared/Pitaco3Contract');
     const utils = require('../shared/utils');
@@ -26,6 +28,19 @@ module.exports = async function (context, req) {
     }
 
     const body = req.body || {};
+    // The Unity GameToken is a write-scoped credential for this account.
+    // Reject writes for patient IDs owned by a different account before side effects.
+    if (body.pacientId && /^[a-f0-9]{24}$/i.test(body.pacientId)) {
+        const belongsToAccount = await PatientModel.exists({
+            _id: body.pacientId, _gameToken: gameToken
+        });
+        if (!belongsToAccount) {
+            context.res = { status: 403,
+                body: utils.createResponse(false, false, 'Paciente fora do escopo deste token.', null, 1) };
+            context.done();
+            return;
+        }
+    }
     if (Object.keys(body).length === 0) {
         context.res = {
             status: 400,

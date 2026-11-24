@@ -1,133 +1,80 @@
+'use strict';
 module.exports = async function (context, req) {
     const mongoose = require('mongoose');
-    const DATABASE = process.env.MongoDbAtlas;
-    mongoose.connect(DATABASE);
-    mongoose.Promise = global.Promise;
-
-    //MinigameOverview Schema
-    require('../shared/UserAccount');
-    const UserAccountModel = mongoose.model('UserAccount');
-
+    const bcrypt = require('bcryptjs');
     const utils = require('../shared/utils');
     const validations = require('../shared/Validators');
-
-    const bcrypt = require("bcryptjs");
-
-    const userAccountReq = req.body || {};
-
-    if (Object.entries(userAccountReq).length === 0) {
-        context.res = {
-            status: 400,
-            body: utils.createResponse(false,
-                false,
-                "Dados vazios!",
-                null,
-                2)
-        }
+    const access = require('../shared/AccessControl');
+    await mongoose.connect(process.env.MongoDbAtlas);
+    require('../shared/UserAccount');
+    require('../shared/Pacient');
+    const User = mongoose.model('UserAccount');
+    const Patient = mongoose.model('Pacient');
+    function reply(status, success, authorized, message, data, errorCode) {
+        context.res = { status, body: utils.createResponse(success, authorized, message, data || null, errorCode ?? null) };
         context.done();
-        return;
     }
-
-    let validationResult = validations.createUserValidator(userAccountReq);
-    if(validationResult.errorCount !== 0){
-        let response = utils.createResponse(false, true, "Erros de validação encontrados!", null, 2);
-        response.errors = validationResult.errors.errors;
-        context.res = {
-            status: 400,
-            body: response
-        }
-        context.done();
-        return;
+    const input = req.body || {};
+    if (!Object.keys(input).length) return reply(400, false, false, 'Dados vazios!', null, 2);
+    const result = validations.createUserValidator(input);
+    if (result.errorCount) {
+        const body = utils.createResponse(false, false, 'Erros de validação encontrados!', null, 2);
+        body.errors = result.errors.errors;
+        context.res = { status: 400, body };
+        return context.done();
     }
-
     try {
-
-        if (userAccountReq.role == "Administrator") {
-            const existingUser = await UserAccountModel.findOne({ $or: [{ email: userAccountReq.email, role: "Administrator" }, { username: userAccountReq.username, role: "Administrator" }] });
-            context.log("[DB FIND] - Find Existing User: ", existingUser);
-
-            if (existingUser) {
-                context.res = {
-                    status: 400,
-                    body: utils.createResponse(true,
-                        false,
-                        "Já existe um usuário cadastrado com este nome e/ou email.",
-                        null,
-                        null)
-                }
-                context.done();
-                return;
+        const role = input.role;
+        let admin = await access.administrator(req, mongoose);
+        let parentToken = '';
+        if (role === 'Administrator') {
+            // Provisioning the very first admin requires a one-time secret set in Azure settings.
+            if (!admin) {
+                const exists = await User.exists({ role: 'Administrator' });
+                if (exists || !access.validBootstrap(req))
+                    return reply(403, false, false, 'Operação administrativa não autorizada.');
             }
+        } else if (role === 'User') {
+            if (!admin) return reply(403, false, false, 'Cadastro de paciente não autorizado.');
+            parentToken = admin.gameToken && admin.gameToken.token;
+            if (!parentToken) return reply(409, false, false, 'Conta administradora sem GameToken.');
+            if (!/^[a-f0-9]{24}$/i.test(input.pacientId || '') ||
+                !await Patient.exists({ _id: input.pacientId, _gameToken: parentToken }))
+                return reply(404, false, false, 'Paciente não encontrado nesta conta.');
+        } else {
+            return reply(400, false, false, 'Tipo de conta inválido.');
         }
 
-        if (userAccountReq.role == "User") {
-            const existingUser = await UserAccountModel.findOne({ username: userAccountReq.username, role: "User", "gameToken.token": userAccountReq.gameToken });
-            context.log("[DB FIND] - Find Existing User: ", existingUser);
+        const match = role === 'Administrator'
+            ? { role, $or: [{ username: input.username }, { email: input.email }] }
+            : { role, username: input.username, 'gameToken.token': parentToken };
+        if (await User.exists(match))
+            return reply(409, false, false, 'Nome de usuário ou e-mail já utilizado.');
 
-            if (existingUser) {
-                context.res = {
-                    status: 400,
-                    body: utils.createResponse(false,
-                        false,
-                        "Já existe um usuário cadastrado com este nome.",
-                        null,
-                        null)
-                }
-                context.done();
-                return;
-            }
-        }
-
-        var newUser = new UserAccountModel({
-            fullname: userAccountReq.fullname,
-            username: userAccountReq.username,
-            password: userAccountReq.role == "Administrator" ? bcrypt.hashSync(userAccountReq.password, 10) : userAccountReq.password, 
-            email: userAccountReq.role == "Administrator" ? userAccountReq.email : userAccountReq.username,
-            role: userAccountReq.role,
-            pacientId: userAccountReq.role == "User" ? userAccountReq.pacientId : "",
-            gameToken: {
-                token: userAccountReq.role == "Administrator" ? "" : userAccountReq.gameToken,
-                description: "",
-                createdAt: null
-            }
+        const passwordHash = await bcrypt.hash(input.password, 12);
+        const newUser = new User({
+            fullname: input.fullname,
+            username: input.username,
+            password: passwordHash,
+            email: input.email,
+            role,
+            pacientId: role === 'User' ? input.pacientId : '',
+            gameToken: { token: parentToken, description: '', createdAt: null }
         });
-
-        const savedUser = await newUser.save();
-        context.log("[DB SAVING] - User Account Created: ", savedUser);
-
-        if (savedUser.role == "Administrator") {
-            utils.sendWelcomeEmail(savedUser.fullname, savedUser.username, userAccountReq.password, savedUser.email);
-            context.res = {
-                status: 201,
-                body: utils.createResponse(true,
-                    false,
-                    "Usuário criado com sucesso.",
-                    { redirectUrl: '/login' },
-                    null)
+        await newUser.save();
+        // Do not log the saved model or send passwords by email.
+        context.log('[AUTH] Conta criada', { role, userId: String(newUser._id) });
+        if (role === 'Administrator') {
+            try {
+                await utils.sendWelcomeEmail(newUser.fullname, newUser.username, newUser.email);
+            } catch (_) {
+                context.log.warn('[AUTH] Falha ao enviar e-mail de boas-vindas (sem credenciais).');
             }
         }
-        else {
-            context.res = {
-                status: 201,
-                body: utils.createResponse(true,
-                    false,
-                    "Usuário criado com sucesso.",
-                    null,
-                    null)
-            }
-        }
-
-
+        return reply(201, true, true, 'Usuário criado com sucesso.',
+            role === 'Administrator' ? { redirectUrl: '/login' } : null);
     } catch (err) {
-        context.log("[DB SAVING] - ERROR: ", err);
-        context.res = {
-            status: 500,
-            body: utils.createResponse(false,
-                false,
-                "Ocorreu um erro interno ao realizar a operação.",
-                null,
-                0)
-        }
+        context.log.error('[AUTH] Falha no cadastro:', err && err.name);
+        return reply(500, false, false, 'Erro interno ao cadastrar conta.', null, 0);
     }
-    context.done();
 };

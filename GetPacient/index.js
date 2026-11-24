@@ -47,6 +47,15 @@ module.exports = async function (context, req) {
         _id: req.params.pacientId
     }
 
+    if (!/^[a-fA-F0-9]{24}$/.test(req.params.pacientId)) {
+        context.res = {
+            status: 400,
+            body: utils.createResponse(false, true, 'Identificador de paciente inválido.', null, 300)
+        };
+        context.done();
+        return;
+    }
+
     const aggregate = PacientModel.aggregate();
     aggregate.match({ _id: mongoose.Types.ObjectId(req.params.pacientId), _gameToken: req.headers.gametoken });
 

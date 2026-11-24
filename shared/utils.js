@@ -1,9 +1,10 @@
 const verifyGameToken = async (token, mongoose) => {
+    // A User account may share a GameToken with the Administrator; the issuer
+    // must always be an active Administrator account.
+    if (typeof token !== 'string' || !token || token.length > 200) return false;
     require('../shared/UserAccount');
-    const UserAccountModel = mongoose.model('UserAccount');
-    const user = await UserAccountModel.findOne({ "gameToken.token": token });
-    if (!user) return false;
-    return true;
+    const User = mongoose.model('UserAccount');
+    return Boolean(await User.exists({ role: 'Administrator', 'gameToken.token': token }));
 }
 
 const validateHeaders = async (headers, context) => {
@@ -58,9 +59,9 @@ const errorCodes = {
     300: "O ID do registro é necessário para realizar esta consulta/atualização."
 }
 
-const sendWelcomeEmail = function (fullname, username, password, userEmail) {
-    var nodemailer = require('nodemailer');
-    var transporter = nodemailer.createTransport({
+const sendWelcomeEmail = async function (fullname, username, userEmail) {
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({
         host: process.env.SMTP_Server_Hostname,
         port: 587,
         auth: {
@@ -68,23 +69,14 @@ const sendWelcomeEmail = function (fullname, username, password, userEmail) {
             pass: process.env.SMTP_Server_Password
         }
     });
-    var mailOptions = {
+    return transporter.sendMail({
         from: process.env.SMTP_FromEmail,
         to: userEmail,
         subject: 'Bem-vindo(a) ao I BLUE IT Service!',
-        html: `
-        <p>Olá` + fullname + `,</p>
-        <p>Obrigado por se cadastrar no I BLUE IT Services!.</p>
-        <p>A sua conta &eacute;:</p>
-        <p><strong>Usu&aacute;rio</strong>: `+ username + `</p>
-        <p><strong>Senha:&nbsp;</strong> `+ password + `</p>
-        <p>Com esta conta ser&aacute; poss&iacute;vel visualizar os dados gerados pelo jogo I BLUE IT.&nbsp;</p>
-        <p>Para começar a enviar dados do jogo para o sistema gere um <b>Token de Acesso</b>.<br>Com o <b>Token de Acesso</b>, insira-o nas configura&ccedil;&otilde;es do jogo I BLUE IT.</p>
-        <p>Esperamos que goste!.</p>
-        <p>---</p>
-        <p>UDESC/CCT - Grupo LARVA</p>`
-    };
-    transporter.sendMail(mailOptions);
+        text: 'Olá ' + fullname + ', sua conta I BLUE IT (' + username +
+            ') foi cadastrada. Por segurança, nenhuma senha é enviada por e-mail. ' +
+            'Use o procedimento de acesso ou redefinição disponibilizado pelo administrador.'
+    });
 }
 
 exports.verifyGameToken = verifyGameToken;

@@ -1,111 +1,50 @@
+'use strict';
+const crypto = require('crypto');
 module.exports = async function (context, req) {
     const mongoose = require('mongoose');
-    const DATABASE = process.env.MongoDbAtlas;
-    mongoose.connect(DATABASE);
-    mongoose.Promise = global.Promise;
-
-    require('../shared/UserAccount');
-    const UserAccountModel = mongoose.model('UserAccount');
-
+    const bcrypt = require('bcryptjs');
     const utils = require('../shared/utils');
     const validations = require('../shared/Validators');
-
-    const bcrypt = require("bcryptjs");
-
-    const userAccountReq = req.body || {};
-
-    if (Object.entries(userAccountReq).length === 0) {
-        context.res = {
-            status: 400,
-            body: utils.createResponse(false,
-                false,
-                "Dados vazios!",
-                null,
-                2)
-        }
+    const access = require('../shared/AccessControl');
+    await mongoose.connect(process.env.MongoDbAtlas);
+    require('../shared/UserAccount');
+    const User = mongoose.model('UserAccount');
+    function reply(status, success, authorized, message, data, code) {
+        context.res = { status, body: utils.createResponse(success, authorized, message, data || null, code ?? null) };
         context.done();
-        return;
     }
-
-    let validationResult = validations.authenticateValidator(userAccountReq);
-    if(validationResult.errorCount !== 0){
-        let response = utils.createResponse(false, true, "Erros de validação encontrados!", null, 2);
-        response.errors = validationResult.errors.errors;
-        context.res = {
-            status: 400,
-            body: response
-        }
-        context.done();
-        return;
-    }
-
+    const input = req.body || {};
+    const validated = validations.authenticateValidator(input);
+    if (validated.errorCount) return reply(400, false, false, 'Credenciais inválidas.', null, 2);
     try {
-        context.log("[DB FINDING] - Finding User Account: ", userAccountReq.username);
-        const user = await UserAccountModel.findOne({ username: userAccountReq.username });
-        if (!user) {
-            context.res = {
-                status: 404,
-                body: utils.createResponse(false,
-                    false,
-                    "Este usuário não existe!.",
-                    null,
-                    null)
-            }
-            context.done();
-            return;
-        }
-        if(user.role == 'Administrator'){
-            if (!bcrypt.compareSync(userAccountReq.password, user.password)) {
-                context.res = {
-                    status: 401,
-                    body: utils.createResponse(false,
-                        false,
-                        "Senha inválida!.",
-                        null,
-                        null)
-                }
-                context.done();
-                return;
+        const user = await User.findOne({ username: input.username });
+        let valid = false, needsMigration = false;
+        if (user && typeof user.password === 'string') {
+            if (/^\$2[aby]\$\d{2}\$/.test(user.password)) {
+                valid = await bcrypt.compare(input.password, user.password);
+            } else {
+                // Transitional legacy account: constant-time comparison, then upgrade on success.
+                valid = access.constantTimeMatch(input.password, user.password);
+                needsMigration = valid;
             }
         }
-        else {
-            if(userAccountReq.password != user.password){
-                context.res = {
-                    status: 401,
-                    body: utils.createResponse(false,
-                        false,
-                        "Senha inválida!.",
-                        null,
-                        null)
-                }
-                context.done();
-                return;
-            }
+        if (!valid) return reply(401, false, false, 'Usuário ou senha inválidos.');
+        if (needsMigration) {
+            user.password = await bcrypt.hash(input.password, 12);
+            await user.save();
         }
-        
-
-        var authTime = new Date();
-        var authExpirationTime = new Date(authTime);
-        authExpirationTime.setHours(authExpirationTime.getHours() + 2);
-
-        context.res = {
-            status: 200,
-            body: utils.createResponse(true,
-                true,
-                "Authenticado com sucesso!.",
-                { redirectUrl: '/', authTime: authTime, authExpirationTime: authExpirationTime, fullname: user.fullname, gameToken: user.gameToken.token, userId: user._id, role: user.role, pacientId: user.pacientId},
-                null)
-        }
+        const session = await access.createSession(user, mongoose);
+        const authTime = new Date();
+        const payload = {
+            redirectUrl: '/', authTime, authExpirationTime: session.expiresAt,
+            fullname: user.fullname,
+            gameToken: (user.gameToken && user.gameToken.token) || '',
+            userId: user._id, role: user.role, pacientId: user.pacientId,
+            sessionToken: session.token
+        };
+        return reply(200, true, true, 'Autenticado com sucesso.', payload);
     } catch (err) {
-        context.log("[DB SAVING] - ERROR: ", err);
-        context.res = {
-            status: 500,
-            body: utils.createResponse(false,
-                false,
-                "Ocorreu um erro interno ao realizar a operação.",
-                null,
-                0)
-        }
+        context.log.error('[AUTH] Falha no login:', err && err.name);
+        return reply(500, false, false, 'Erro interno ao autenticar.', null, 0);
     }
-    context.done();
 };

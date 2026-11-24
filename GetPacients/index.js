@@ -30,11 +30,11 @@ module.exports = async function (context, req) {
     const aggregate = PacientModel.aggregate();
 
     if (req.query.name)
-        matchOperators.$match.name = { $regex: "^" + req.query.name + ".*", $options: 'i' };
+        matchOperators.$match.name = { $regex: "^" + String(req.query.name).replace(/[.*+?^\${}()|[\]\\]/g, '\\"^" + req.query.name + ".*"') + ".*", $options: 'i' };
     if (req.query.condition)
         matchOperators.$match.condition = { $eq: req.query.condition };
     if (req.query.sex)
-        matchOperators.$match.sex = { $eq: sex };
+        matchOperators.$match.sex = { $eq: req.query.sex };
     
     if (req.query.fromAge) {
         let date = new Date();
@@ -95,10 +95,24 @@ module.exports = async function (context, req) {
         });
     
 
-    if (req.query.limit)
-        aggregate.limit(parseInt(req.query.limit))
-    if (req.query.skip)
-        aggregate.skip(parseInt(req.query.skip));
+    if (req.query.limit !== undefined) {
+        const limit = Number(req.query.limit);
+        if (!Number.isSafeInteger(limit) || limit < 1 || limit > 1000) {
+            context.res = { status: 400, body: utils.createResponse(false, true, 'limit inválido.', null, 300) };
+            context.done();
+            return;
+        }
+        aggregate.limit(limit);
+    }
+    if (req.query.skip !== undefined) {
+        const skip = Number(req.query.skip);
+        if (!Number.isSafeInteger(skip) || skip < 0 || skip > 1000000) {
+            context.res = { status: 400, body: utils.createResponse(false, true, 'skip inválido.', null, 300) };
+            context.done();
+            return;
+        }
+        aggregate.skip(skip);
+    }
 
     try {
 
