@@ -1,0 +1,40 @@
+name: SonarQube Cloud - ${{ github.event.repository.name }}
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sonarcloud:
+    name: SonarQube Cloud - JavaScript quality and security
+    # Must first import THIS repo as a project on SonarQube Cloud
+    # and set GitHub Actions variables SONAR_ORGANIZATION and SONAR_PROJECT_KEY.
+    if: ${{ vars.SONAR_ORGANIZATION != '' && vars.SONAR_PROJECT_KEY != '' }}
+    runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - name: Checkout complete history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Explain missing Sonar token (configuration pending)
+        if: ${{ env.SONAR_TOKEN == '' }}
+        run: |
+          echo "::notice::SonarQube Cloud project variables exist, but SONAR_TOKEN secret is missing. No Sonar scan was performed."
+      - name: Analyze using the SonarQube Cloud project credentials
+        if: ${{ env.SONAR_TOKEN != '' }}
+        uses: SonarSource/sonarqube-scan-action@v8.3.0
+        with:
+          args: >-
+            -Dsonar.projectKey=${{ vars.SONAR_PROJECT_KEY }}
+            -Dsonar.organization=${{ vars.SONAR_ORGANIZATION }}
+            -Dsonar.sources=.
+            -Dsonar.exclusions=node_modules/**,tests/**,.github/**,.vs/**,coverage/**,**/local.settings.json,**/release.zip
+            -Dsonar.host.url=https://sonarcloud.io
