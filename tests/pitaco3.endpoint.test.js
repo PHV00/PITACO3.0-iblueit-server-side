@@ -118,6 +118,13 @@ async function request(body, token) {
     assert.strictEqual(invalidResponse.status, 400);
     assert.strictEqual(state.overviews.length, 1);
 
+    const otherAccount = Object.assign({}, fixture, {
+        pacientId: 'aaaaaaaaaaaaaaaaaaaaaaaa',
+        clientRunId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+    });
+    assert.strictEqual((await request(otherAccount)).status, 403);
+    assert.strictEqual(state.overviews.length, 1);
+
     const forbidden = await request(fixture, 'invalid-token');
     assert.strictEqual(forbidden.status, 403);
     assert.strictEqual(state.overviews.length, 1);
