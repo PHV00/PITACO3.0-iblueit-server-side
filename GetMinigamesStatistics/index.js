@@ -31,7 +31,7 @@ module.exports = async function (context, req) {
 
     const aggregate = PacientModel.aggregate();
 
-    const pacientsMatchOperators = { $match: {} };
+    const pacientsMatchOperators = { $match: { _gameToken: req.headers.gametoken } };
 
     let maxSessions = Number.MAX_SAFE_INTEGER;
     let devices;

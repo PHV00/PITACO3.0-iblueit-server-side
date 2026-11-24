@@ -9,6 +9,15 @@ module.exports = async function (context, req) {
     const PacientModel = mongoose.model('Pacient');
 
     const utils = require('../shared/utils');
+    const access = require('../shared/AccessControl');
+    const admin = await access.administrator(req, mongoose);
+    if (!admin || !admin.gameToken || admin.gameToken.token !== req.headers.gametoken) {
+        context.res = { status: 403,
+            body: utils.createResponse(false, false, 'Operação administrativa não autorizada.', null, 1) };
+        context.done();
+        return;
+    }
+
     const validations = require('../shared/Validators');
 
     var isVerifiedGameToken = await utils.verifyGameToken(req.headers.gametoken, mongoose);
@@ -58,7 +67,7 @@ module.exports = async function (context, req) {
 
     try {
         const savedPacient = await (new PacientModel(pacientReq)).save();
-        context.log("[DB SAVING] - Pacient Saved: ", savedPacient);
+        context.log("[PATIENT] Paciente cadastrado:", String(savedPacient._id));
         context.res = {
             status: 201,
             body: utils.createResponse(true,

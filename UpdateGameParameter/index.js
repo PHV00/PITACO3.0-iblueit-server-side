@@ -6,9 +6,20 @@ module.exports = async function (context, req) {
 
     //GameParameterModel Schema
     require('../shared/GameParameter');
+    require('../shared/Pacient');
     const GameParameterModel = mongoose.model('GameParameter');
+    const PatientModel = mongoose.model('Pacient');
 
     const utils = require('../shared/utils');
+    const access = require('../shared/AccessControl');
+    const admin = await access.administrator(req, mongoose);
+    if (!admin || !admin.gameToken || admin.gameToken.token !== req.headers.gametoken) {
+        context.res = { status: 403,
+            body: utils.createResponse(false, false, 'Operação administrativa não autorizada.', null, 1) };
+        context.done();
+        return;
+    }
+
 
     var isVerifiedGameToken = await utils.verifyGameToken(req.headers.gametoken, mongoose);
 
@@ -36,15 +47,22 @@ module.exports = async function (context, req) {
         return;
     }
 
-    pacientReq._gameToken = req.headers.gametoken;
+    if (String(req.params.pacientId) !== String(pacientReq.pacientId) ||
+        !await PatientModel.exists({
+            _id: req.params.pacientId, _gameToken: req.headers.gametoken
+        })) {
+        context.res = { status: 403,
+            body: utils.createResponse(false, false, 'Paciente não autorizado.', null, 1) };
+        context.done();
+        return;
+    }
 
     try {
         const updatedGameParameter = await GameParameterModel.updateOne(
-            { pacientId: req.params.pacientId, _gameToken: req.headers.gametoken },
+            { pacientId: req.params.pacientId, stageId: req.body.stageId, phase: req.body.phase, level: req.body.level },
             {
                 $set:
                 {
-                    pacientId: req.body.pacientId,
                     stageId: req.body.stageId,
                     phase:  req.body.phase,
                     level: req.body.level,

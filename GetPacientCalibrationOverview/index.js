@@ -51,7 +51,8 @@ module.exports = async function (context, req) {
     // }
 
     const findObj = {
-        pacientId: req.params.pacientId
+        pacientId: req.params.pacientId,
+        _gameToken: req.headers.gametoken
     }
 
     const findOptionsObj = { sort: { created_at: -1 } };

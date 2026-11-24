@@ -6,7 +6,9 @@ module.exports = async function (context, req) {
 
     //GameParameterModel Schema
     require('../shared/GameParameter');
+    require('../shared/Pacient');
     const GameParameterModel = mongoose.model('GameParameter');
+    const PatientModel = mongoose.model('Pacient');
 
     const utils = require('../shared/utils');
 
@@ -65,6 +67,19 @@ module.exports = async function (context, req) {
         findOptionsObj.sort = { created_at: 1 };
 
     try {
+        // GameParameter lacks _gameToken in legacy storage. Scope through patient ownership.
+        const owned = await PatientModel.find(
+            { _gameToken: req.headers.gametoken }, '_id'
+        );
+        const ids = new Set(owned.map(item => String(item._id)));
+        if (req.query.pacientId && !ids.has(String(req.query.pacientId))) {
+            context.res = { status: 403,
+                body: utils.createResponse(false, false, 'Paciente não autorizado.', null, 1) };
+            context.done();
+            return;
+        }
+        findObj.pacientId = req.query.pacientId
+            ? String(req.query.pacientId) : { $in: Array.from(ids) };
         const GameParameterModels = await GameParameterModel.find(findObj, null, findOptionsObj);
         context.log("[DB QUERYING] - GameParameterModel Get");
         context.res = {

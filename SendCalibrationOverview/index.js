@@ -11,6 +11,8 @@ module.exports = async function (context, req) {
     const PlaySessionModel = mongoose.model('PlaySession');
 
     const utils = require('../shared/utils');
+    require('../shared/Pacient');
+    const PatientModel = mongoose.model('Pacient');
     const validations = require('../shared/Validators');
 
     var isVerifiedGameToken = await utils.verifyGameToken(req.headers.gametoken, mongoose);
@@ -55,6 +57,15 @@ module.exports = async function (context, req) {
         return;
     }
 
+    if (!/^[a-f0-9]{24}$/i.test(calibrationReq.pacientId || '') ||
+        !await PatientModel.exists({
+            _id: calibrationReq.pacientId, _gameToken: req.headers.gametoken
+        })) {
+        context.res = { status: 403,
+            body: utils.createResponse(false, false, 'Paciente fora do escopo deste token.', null, 1) };
+        context.done();
+        return;
+    }
     calibrationReq._gameToken = req.headers.gametoken;
 
     try {
@@ -75,7 +86,7 @@ module.exports = async function (context, req) {
         }
 
         const savedCalibrationOverview = await (new CalibrationOverviewModel(calibrationReq)).save();
-        context.log("[OUTPUT] - Calibration Overview Saved: ", savedCalibrationOverview);
+        context.log("[CALIBRATION] Registro salvo:", String(savedCalibrationOverview._id));
         context.res = {
             status: 201,
             body: utils.createResponse(true,

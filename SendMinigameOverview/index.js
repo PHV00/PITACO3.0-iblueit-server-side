@@ -13,6 +13,8 @@ module.exports = async function (context, req) {
     const PlaySessionModel = mongoose.model('PlaySession');
 
     const utils = require('../shared/utils');
+    require('../shared/Pacient');
+    const PatientModel = mongoose.model('Pacient');
     const validations = require('../shared/Validators');
 
     utils.validateHeaders(req.headers, context);
@@ -59,6 +61,15 @@ module.exports = async function (context, req) {
         return;
     }
 
+    if (!/^[a-f0-9]{24}$/i.test(minigameOverviewReq.pacientId || '') ||
+        !await PatientModel.exists({
+            _id: minigameOverviewReq.pacientId, _gameToken: req.headers.gametoken
+        })) {
+        context.res = { status: 403,
+            body: utils.createResponse(false, false, 'Paciente fora do escopo deste token.', null, 1) };
+        context.done();
+        return;
+    }
     minigameOverviewReq._gameToken = req.headers.gametoken;
 
     var flowDataDevicesIds = [];
@@ -100,7 +111,7 @@ module.exports = async function (context, req) {
         }
 
         const savedMinigameOverview = await (new MinigameOverviewModel(minigameOverviewReq)).save();
-        context.log("[OUTPUT] - MinigameOverview Saved: ", savedMinigameOverview);
+        context.log("[MINIGAME] Registro salvo:", String(savedMinigameOverview._id));
         context.res = {
             status: 201,
             body: utils.createResponse(true,

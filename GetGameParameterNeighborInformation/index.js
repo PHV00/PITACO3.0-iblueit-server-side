@@ -8,7 +8,9 @@ module.exports = async function (context, req) {
 
     //GameParameterModel Schema
     require('../shared/GameParameter');
+    require('../shared/Pacient');
     const GameParameterModel = mongoose.model('GameParameter');
+    const PatientModel = mongoose.model('Pacient');
 
     const utils = require('../shared/utils');
 
@@ -38,6 +40,13 @@ module.exports = async function (context, req) {
         context.done();
         return;
     } else {
+        if (!/^[a-f0-9]{24}$/i.test(pacientId) ||
+            !await PatientModel.exists({ _id: pacientId, _gameToken: req.headers.gametoken })) {
+            context.res = { status: 403,
+                body: utils.createResponse(false, false, 'Paciente não autorizado.', null, 1) };
+            context.done();
+            return;
+        }
         var config = {
             method: 'get',
             url: URL_API_IA + '/neighborsByPacient',
@@ -66,6 +75,25 @@ module.exports = async function (context, req) {
             context.done();
             return;
         });
+        if (!Array.isArray(neighborsPacientReturn) || !neighborsPacientReturn.length) {
+            if (!context.res) context.res = { status: 200,
+                body: utils.createResponse(true, true, 'Nenhum vizinho disponível.', [], null) };
+            context.done();
+            return;
+        }
+        const potentialIds = neighborsPacientReturn.map(item => item.pacientId);
+        const available = await PatientModel.find({
+            _id: { $in: potentialIds }, _gameToken: req.headers.gametoken
+        }, '_id');
+        const allowedIds = new Set(available.map(item => String(item._id)));
+        neighborsPacientReturn = neighborsPacientReturn
+            .filter(item => allowedIds.has(String(item.pacientId)));
+        if (!neighborsPacientReturn.length) {
+            context.res = { status: 200,
+                body: utils.createResponse(true, true, 'Nenhum vizinho autorizado.', [], null) };
+            context.done();
+            return;
+        }
         var neighborsPacientIds = neighborsPacientReturn.map((neighborsPacient) => neighborsPacient.pacientId)
         var arrayConfigurations = []
         const GameParameters = await GameParameterModel.find({ "pacientId": neighborsPacientIds });
@@ -74,7 +102,7 @@ module.exports = async function (context, req) {
             arrayConfigurations.push({
                 "stageId": getFloat(GameParameter.stageId),
                 "phase": getFloat(GameParameter.phase),
-                "level": getFloat(GameParameter.phase),
+                "level": getFloat(GameParameter.level),
                 "pacientId": GameParameter.pacientId,
                 "pacientName": neighborsPacientReturn.find(neighborsPacient => neighborsPacient.pacientId === GameParameter.pacientId).pacientName,
                 "ObjectSpeedFactor": getFloat(GameParameter.ObjectSpeedFactor),
