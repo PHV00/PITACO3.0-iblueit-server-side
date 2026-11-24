@@ -6,7 +6,7 @@
 
 [`PHV00/PITACO3.0-iblueit-server-side`](https://github.com/PHV00/PITACO3.0-iblueit-server-side)
 
-A Action `.github/workflows/sonarqube-cloud.yml` inicia análise C/JavaScript adequada ao projeto, usando o scanner oficial do SonarQube Cloud. **Não modifica as Actions de build/testes/deploy Azure existentes** e não precisa de dados reais de pacientes.
+A Action `.github/workflows/sonarqube-cloud.yml` prepara análise estática JavaScript adequada ao projeto, usando o scanner oficial do SonarQube Cloud. **Não modifica as Actions de build/testes/deploy Azure existentes** e não precisa de dados reais de pacientes.
 
 ## O que falta configurar no SonarQube Cloud
 
